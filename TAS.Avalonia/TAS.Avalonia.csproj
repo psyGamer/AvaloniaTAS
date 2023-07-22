@@ -51,9 +51,12 @@
     <Reference Include="libs/AvaloniaEdit.dll" Publicize="true">
         <Private>false</Private>
     </Reference>
+    <Reference Include="libs/AvaloniaEdit.TextMate.dll" Publicize="true">
+        <Private>false</Private>
+    </Reference>
     <!--PackageReference Include="Avalonia.AvaloniaEdit" Version="11.0.0" /-->
-
     <PackageReference Include="AvaloniaEdit.TextMate" Version="11.0.0" />
+
     <PackageReference Include="AvaloniaEdit.TextMate.Grammars" Version="0.10.12" />
 
     <PackageReference Include="ReactiveUI" Version="18.3.1" />
