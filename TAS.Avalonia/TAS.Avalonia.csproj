@@ -51,11 +51,11 @@
     <Reference Include="AvaloniaEdit">
         <HintPath>libs/AvaloniaEdit.dll</HintPath>
     </Reference>
-    <!--Reference Include="libs/AvaloniaEdit.TextMate.dll" Publicize="true">
-        <Private>false</Private>
-    </Reference-->
+    <Reference Include="AvaloniaEdit.TextMate">
+        <HintPath>libs/AvaloniaEdit.TextMate.dll</HintPath>
+    </Reference>
     <!--PackageReference Include="Avalonia.AvaloniaEdit" Version="11.0.0" /-->
-    <PackageReference Include="AvaloniaEdit.TextMate" Version="11.0.0" />
+    <!--PackageReference Include="AvaloniaEdit.TextMate" Version="11.0.0" /-->
 
     <PackageReference Include="TextMateSharp.Grammars" Version="1.0.55" />
 
