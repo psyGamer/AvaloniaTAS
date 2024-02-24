@@ -2,12 +2,16 @@ using System.Reactive;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using AvaloniaEdit;
 using ReactiveUI;
+using TAS.Avalonia.Controls;
+using TAS.Avalonia.Editing;
 using TAS.Avalonia.Models;
 using TAS.Avalonia.Services;
+using TAS.Avalonia.Views;
 
 namespace TAS.Avalonia.ViewModels;
 
@@ -53,9 +57,6 @@ public class MainWindowViewModel : ViewModelBase {
     public ReactiveCommand<Unit, Unit> SetFastForwardSpeedCommand { get; }
     public ReactiveCommand<Unit, Unit> SetSlowForwardSpeedCommand { get; }
 
-    // Context
-    public ReactiveCommand<Unit, Unit> ToggleCommentsCommand { get; }
-
     private readonly ObservableAsPropertyHelper<string> _windowTitle;
     public string WindowTitle => _windowTitle.Value;
 
@@ -87,6 +88,8 @@ public class MainWindowViewModel : ViewModelBase {
 
     public bool MenuVisible => true; //!RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
+    private readonly EditorControl _editor;
+
     private readonly CelesteService _celesteService;
     private readonly DialogService _dialogService;
     private readonly SettingsService _settingsService;
@@ -100,7 +103,9 @@ public class MainWindowViewModel : ViewModelBase {
         AppleUniformTypeIdentifiers = new[] { "public.item" }, // TODO: replace this with custom
     };
 
-    public MainWindowViewModel() {
+    public MainWindowViewModel(MainWindow window) {
+        _editor = window.FindControl<EditorControl>("editor");
+
         _celesteService = (Application.Current as App)!.CelesteService;
         _dialogService = (Application.Current as App)!.DialogService;
         _settingsService = (Application.Current as App)!.SettingsService;
@@ -152,9 +157,6 @@ public class MainWindowViewModel : ViewModelBase {
 
         SetFastForwardSpeedCommand = ReactiveCommand.CreateFromTask(SetFastForwardSpeed);
         SetSlowForwardSpeedCommand = ReactiveCommand.CreateFromTask(SetSlowForwardSpeed);
-
-        // Context
-        ToggleCommentsCommand = ReactiveCommand.Create(ToggleComments);
 
         var lastOpenFilePath = _settingsService.LastOpenFilePath;
 
@@ -244,57 +246,82 @@ public class MainWindowViewModel : ViewModelBase {
     }
 
     private MenuModel[] CreateContextMenu() => new[] {
-        new MenuModel("Cut"),
-        new MenuModel("Copy"),
-        new MenuModel("Paste"),
+        new MenuModel("Cut", routedCommand: ApplicationCommands.Cut, textArea: _editor.editor.TextArea),
+        new MenuModel("Copy", routedCommand: ApplicationCommands.Copy, textArea: _editor.editor.TextArea),
+        new MenuModel("Paste", routedCommand: ApplicationCommands.Paste, textArea: _editor.editor.TextArea),
         MenuModel.Separator,
-        new MenuModel("Undo"),
-        new MenuModel("Redo"),
+        new MenuModel("Undo", routedCommand: ApplicationCommands.Undo, textArea: _editor.editor.TextArea),
+        new MenuModel("Redo", routedCommand: TASInputHandler.Redo, textArea: _editor.editor.TextArea),
+        MenuModel.Separator,
+        new MenuModel("Select All", routedCommand: ApplicationCommands.SelectAll, textArea: _editor.editor.TextArea),
+        new MenuModel("Select Block", routedCommand: TASCaretNavigationCommandHandler.SelectBlock, textArea: _editor.editor.TextArea),
         MenuModel.Separator,
         new MenuModel("Insert/Remove Breakpoint"),
         new MenuModel("Insert/Remove Savestate Breakpoint"),
         new MenuModel("Remove All Uncommented Breakpoints"),
         new MenuModel("Remove All Breakpoints"),
         new MenuModel("Comment/Uncomment All Breakpoints"),
+        new MenuModel("Comment/Uncomment Inputs", routedCommand: TASEditingCommandHandler.ToggleCommentInputs, textArea: _editor.editor.TextArea),
+        new MenuModel("Comment/Uncomment Text", routedCommand: TASEditingCommandHandler.ToggleCommentText, textArea: _editor.editor.TextArea),
         MenuModel.Separator,
-        new MenuModel("Comment/Uncomment Text", command: ToggleCommentsCommand),
-        new MenuModel("Insert Room Name"),
-        new MenuModel("Insert Current In-Game Time"),
+        new MenuModel("Insert Room Name", routedCommand: TASEditingCommandHandler.InsertRoomName, textArea: _editor.editor.TextArea),
+        new MenuModel("Insert Current In-Game Time", routedCommand: TASEditingCommandHandler.InsertTime, textArea: _editor.editor.TextArea),
         new MenuModel("Insert Mod Info"),
         new MenuModel("Insert Console Load Command"),
         new MenuModel("Insert Simple Console Load Command"),
         new MenuModel("Insert Other Command") {
-            new MenuModel("EnforceLegal"),
-            new MenuModel("Unsafe"),
-            new MenuModel("Safe"),
+            new MenuModel("EnforceLegal", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "EnforceLegal", textArea: _editor.editor.TextArea),
+            new MenuModel("Unsafe", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "Unsafe", textArea: _editor.editor.TextArea),
+            new MenuModel("Safe", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "Safe", textArea: _editor.editor.TextArea),
             MenuModel.Separator,
-            new MenuModel("Read"),
-            new MenuModel("Play"),
+            new MenuModel("Read", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "Read, File Name, Starting Line, (Ending Line)", textArea: _editor.editor.TextArea),
+            new MenuModel("Play", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "Play, Starting Line", textArea: _editor.editor.TextArea),
             MenuModel.Separator,
-            new MenuModel("Repeat"),
-            new MenuModel("EndRepeat"),
+            new MenuModel("Repeat", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "Repeat 2\n\nEndRepeat", textArea: _editor.editor.TextArea),
+            new MenuModel("EndRepeat", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "EndRepeat", textArea: _editor.editor.TextArea),
             MenuModel.Separator,
-            new MenuModel("Set"),
+            new MenuModel("Set", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "Set, (Mod).Setting, Value", textArea: _editor.editor.TextArea),
+            new MenuModel("Invoke", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "Invoke, Entity.Method, Parameter", textArea: _editor.editor.TextArea),
+            new MenuModel("EvalLua", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "EvalLua, Code", textArea: _editor.editor.TextArea),
             MenuModel.Separator,
-            new MenuModel("AnalogMode"),
+            new MenuModel("Press", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "Press, Key1, Key2...", textArea: _editor.editor.TextArea),
             MenuModel.Separator,
-            new MenuModel("StartExportGameInfo"),
-            new MenuModel("FinishExportGameInfo"),
+            new MenuModel("AnalogMode", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "AnalogMode, Ignore/Circle/Square/Precise", textArea: _editor.editor.TextArea),
             MenuModel.Separator,
-            new MenuModel("StartExportRoomInfo"),
-            new MenuModel("FinishExportRoomInfo"),
+            new MenuModel("StunPause", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "StunPause\n\nEndStunPause", textArea: _editor.editor.TextArea),
+            new MenuModel("EndStunPause", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "EndStunPause", textArea: _editor.editor.TextArea),
+            new MenuModel("StunPauseMode", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "StunPauseMode, Simulate/Input", textArea: _editor.editor.TextArea),
             MenuModel.Separator,
-            new MenuModel("Add"),
-            new MenuModel("Skip"),
-            new MenuModel("StartExportLibTAS"),
-            new MenuModel("FinishExportLibTAS"),
+            new MenuModel("AutoInput", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "AutoInput, 2\n   1,S,N\n  10,O\nStartAutoInput\n\nEndAutoInput", textArea: _editor.editor.TextArea),
+            new MenuModel("StartAutoInput", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "StartAutoInput", textArea: _editor.editor.TextArea),
+            new MenuModel("EndAutoInput", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "EndAutoInput", textArea: _editor.editor.TextArea),
+            new MenuModel("SkipInput", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "SkipInput", textArea: _editor.editor.TextArea),
             MenuModel.Separator,
-            new MenuModel("CompleteInfo"),
-            new MenuModel("Record Count"),
-            new MenuModel("File Time"),
-            new MenuModel("Chapter Time"),
+            new MenuModel("SaveAndQuitReenter", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "SaveAndQuitReenter", textArea: _editor.editor.TextArea),
             MenuModel.Separator,
-            new MenuModel("Exit Game"),
+            new MenuModel("ExportGameInfo", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "ExportGameInfo dump.txt", textArea: _editor.editor.TextArea),
+            new MenuModel("EndExportGameInfo", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "EndExportGameInfo", textArea: _editor.editor.TextArea),
+            MenuModel.Separator,
+            new MenuModel("ExportRoomInfo", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "ExportRoomInfo dump_room_info.txt", textArea: _editor.editor.TextArea),
+            new MenuModel("EndExportRoomInfo", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "EndExportRoomInfo", textArea: _editor.editor.TextArea),
+            MenuModel.Separator,
+            new MenuModel("StartRecording", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "StartRecording", textArea: _editor.editor.TextArea),
+            new MenuModel("StopRecording", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "StopRecording", textArea: _editor.editor.TextArea),
+            MenuModel.Separator,
+            new MenuModel("Add", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "Add, (input line)", textArea: _editor.editor.TextArea),
+            new MenuModel("Skip", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "Skip", textArea: _editor.editor.TextArea),
+            new MenuModel("Marker", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "Marker", textArea: _editor.editor.TextArea),
+            new MenuModel("ExportLibTAS", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "ExportLibTAS Celeste.ltm", textArea: _editor.editor.TextArea),
+            new MenuModel("EndExportLibTAS", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "EndExportLibTAS", textArea: _editor.editor.TextArea),
+            MenuModel.Separator,
+            new MenuModel("CompleteInfo", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "CompleteInfo A 1", textArea: _editor.editor.TextArea),
+            new MenuModel("RecordCount", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "RecordCount: 1", textArea: _editor.editor.TextArea),
+            new MenuModel("FileTime", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "FileTime:", textArea: _editor.editor.TextArea),
+            new MenuModel("ChapterTime", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "ChapterTime:", textArea: _editor.editor.TextArea),
+            new MenuModel("MidwayFileTime", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "MidwayFileTime:", textArea: _editor.editor.TextArea),
+            new MenuModel("MidwayChapterTime", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "MidwayChapterTime:", textArea: _editor.editor.TextArea),
+            MenuModel.Separator,
+            new MenuModel("Exit Game", routedCommand: TASEditingCommandHandler.InsertCommand, commandParameter: "EnforceLegal", textArea: _editor.editor.TextArea),
         },
         MenuModel.Separator,
         new MenuModel("Swap Selected C and X"),
@@ -426,7 +453,4 @@ public class MainWindowViewModel : ViewModelBase {
     }
 
     private void Exit() => Application.Current?.DesktopLifetime().Shutdown();
-
-    private void ToggleComments() {
-    }
 }

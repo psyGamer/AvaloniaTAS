@@ -2,7 +2,10 @@ using System.Collections;
 using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Input;
+using AvaloniaEdit;
+using AvaloniaEdit.Editing;
 using DynamicData;
+using ReactiveUI;
 
 #pragma warning disable CS8601
 
@@ -19,6 +22,16 @@ public class MenuModel : IEnumerable<MenuModel> {
     public bool? IsEnabled { get; init; }
     public bool IsChecked { get; init; }
     public bool IsVisible { get; init; } = true;
+
+    public MenuModel(string header, RoutedCommand routedCommand, TextArea textArea, object commandParameter = null, bool? isEnabled = null, bool isChecked = false, bool isVisible = true) {
+        Header = header;
+        Command = ReactiveCommand.Create<object>(param => routedCommand.Execute(param, textArea));
+        CommandParameter = commandParameter;
+        Gesture = routedCommand.Gesture;
+        IsEnabled = isEnabled;
+        IsChecked = isChecked;
+        IsVisible = isVisible;
+    }
 
     public MenuModel(string header, ICommand command = null, object commandParameter = null, KeyGesture gesture = null, bool? isEnabled = null, bool isChecked = false, bool isVisible = true) {
         Header = header;
