@@ -2,22 +2,46 @@ name: Build
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [ main ]
+  push:
+    branches:
+      - "*"
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        include:
+          #          - platform: macos-latest
+          #            arch: x64
+          - platform: macos-latest
+            arch: arm64
+    #          - platform: ubuntu-latest
+    #            arch: x64
+    #          - platform: ubuntu-latest
+    #            arch: arm64
+    #          - platform: ubuntu-latest
+    #            arch: arm
+    #          - platform: windows-latest
+    #            arch: x64
+    
+    runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4.1.1
         with:
           submodules: 'true'
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4.0.0
         with:
-          dotnet-version: '7.0'
-      - name: Install dependencies
-        run: dotnet restore
+          dotnet-version: 7.0.x
+
       - name: Build
-        run: dotnet build TAS.Avalonia/TAS.Avalonia.csproj --configuration Release --no-restore
+        env:
+          os: ${{ runner.os == 'Windows' && 'win' || runner.os == 'macOS' && 'osx' || 'linux' }}
+        run: dotnet publish -c Release -r ${{ env.os }}-${{ matrix.arch }} -p:ImportByWildcardBeforeSolution=false -p:PublishSingleFile=true -o build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: AvaloniaTAS-${{ runner.os == 'Windows' && 'win' || runner.os == 'macOS' && 'osx' || 'linux' }}-${{ matrix.arch }}
+          path: build/**/*
