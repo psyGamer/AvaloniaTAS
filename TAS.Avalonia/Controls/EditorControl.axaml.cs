@@ -54,6 +54,7 @@ public partial class EditorControl : UserControl {
         var csharpLanguage = _registryOptions.GetLanguageByExtension(".cs");
         _textMateInstallation.SetGrammar(_registryOptions.GetScopeByLanguageId(csharpLanguage.Id));
         editor.TextArea.ActiveInputHandler = new TASInputHandler(editor.TextArea);
+        editor.TextArea.PushStackedInputHandler(new TASStackedInputHandler(editor.TextArea));
         editor.TextArea.Caret.PositionChanged += (_, _) => CaretPosition = editor.TextArea.Caret.Position;
         editor.TextArea.AddHandler(TextInputEvent, HandleActionInput, RoutingStrategies.Tunnel);
         editor.TextArea.TextView.BackgroundRenderers.Add(new TASLineRenderer(editor.TextArea));
@@ -153,6 +154,13 @@ public partial class EditorControl : UserControl {
     }
 
     private static void HandleActionInput(TextArea textArea, TextInputEventArgs e) {
+        // Manually cancel the event, because the hotkey got forwarded to Celeste
+        if (TASStackedInputHandler.CancelNextTextInputEvent.IsRunning && TASStackedInputHandler.CancelNextTextInputEvent.Elapsed < TASStackedInputHandler.CancellationTime) {
+            TASStackedInputHandler.CancelNextTextInputEvent.Stop();
+            e.Handled = true;
+            return;
+        }
+
         // We can only handle single characters
         if (e.Text is not { Length: 1 }) return;
 

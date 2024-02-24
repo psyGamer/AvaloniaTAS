@@ -1,5 +1,5 @@
+using Avalonia.Input;
 using System.Globalization;
-using JetBrains.Annotations;
 using StudioCommunication;
 using TAS.Avalonia.Communication;
 
@@ -20,6 +20,48 @@ public class CelesteService {
 
     public void WriteWait() => Server.WriteWait();
     public void SendPath(string path) => Server.SendPath(path);
+
+    public bool SendKeyEvent(Key key, KeyModifiers modifiers, bool released) {
+        var winFormsKey = key.ToWinForms();
+        bool pressedAny = false;
+
+        foreach (HotkeyID hotkeyIDs in _bindings.Keys) {
+            List<Keys> keys = _bindings[hotkeyIDs];
+
+            bool pressed = keys.Count > 0 && keys.All(IsKeyDown);
+            if (pressed && keys.Count == 1) {
+                if (!keys.Contains(Keys.LShiftKey) && !keys.Contains(Keys.RShiftKey) && modifiers.HasFlag(KeyModifiers.Shift)) {
+                    pressed = false;
+                }
+                if (!keys.Contains(Keys.LControlKey) && !keys.Contains(Keys.RControlKey) && modifiers.HasFlag(KeyModifiers.Control)) {
+                    pressed = false;
+                }
+                if (!keys.Contains(Keys.LMenu) && !keys.Contains(Keys.RMenu) && modifiers.HasFlag(KeyModifiers.Alt)) {
+                    pressed = false;
+                }
+            }
+
+            if (pressed) {
+                pressedAny = true;
+                // if (hotkeyIDs == HotkeyID.FastForward) {
+                //     fastForwarding = true;
+                // } else if (hotkeyIDs == HotkeyID.SlowForward) {
+                //     slowForwarding = true;
+                // }
+
+                Server.SendHotkeyPressed(hotkeyIDs, released);
+            }
+        }
+
+        return pressedAny;
+
+        bool IsKeyDown(Keys toCheck) {
+            return toCheck == winFormsKey ||
+                   toCheck is Keys.LShiftKey or Keys.RShiftKey && modifiers.HasFlag(KeyModifiers.Shift) ||
+                   toCheck is Keys.LControlKey or Keys.RControlKey && modifiers.HasFlag(KeyModifiers.Control) ||
+                   toCheck is Keys.LMenu or Keys.RMenu && modifiers.HasFlag(KeyModifiers.Alt);
+        }
+    }
 
     public void Play() {
     }
