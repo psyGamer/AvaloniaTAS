@@ -74,33 +74,17 @@ public partial class EditorControl : UserControl {
 
             Dispatcher.UIThread.InvokeAsync(() =>
             {
-                const int LinesBelow = 3;
-                const int LinesAbove = 3;
-
                 var view = editor.TextArea.TextView;
                 editor.TextArea.Caret.Line = state.CurrentLine + 1;
 
-                // Below
-                {
-                    var visualLine = view.GetOrConstructVisualLine(view.Document.GetLineByNumber(editor.TextArea.Caret.Line + LinesBelow));
-                    var textLine = visualLine.GetTextLine(0, false);
+                var visualLine = view.GetOrConstructVisualLine(view.Document.GetLineByNumber(editor.TextArea.Caret.Line));
+                var textLine = visualLine.GetTextLine(0, false);
 
-                    double lineTop = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextTop);
-                    double lineBottom = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextBottom);
+                double lineTop = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextTop);
+                double lineBottom = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextBottom);
 
-                    view.MakeVisible(new Rect(0, lineTop, 0, lineBottom - lineTop));
-                }
-
-                // Above
-                {
-                    var visualLine = view.GetOrConstructVisualLine(view.Document.GetLineByNumber(editor.TextArea.Caret.Line - LinesAbove));
-                    var textLine = visualLine.GetTextLine(0, false);
-
-                    double lineTop = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextTop);
-                    double lineBottom = visualLine.GetTextLineVisualYPosition(textLine, VisualYPosition.TextBottom);
-
-                    view.MakeVisible(new Rect(0, lineTop, 0, lineBottom - lineTop));
-                }
+                view.MakeVisible(new Rect(0, lineTop, 0, lineBottom - lineTop));
+                view.MakeVisible(new Rect(0, lineTop + editor.ViewportHeight / 2.0f, 0, lineBottom - lineTop));
             });
         };
     }
