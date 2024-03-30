@@ -25,7 +25,7 @@ public class TASStackedInputHandler : TextAreaStackedInputHandler {
 
     public override void OnPreviewKeyDown(KeyEventArgs e) {
         var app = (Application.Current as App)!;
-        Console.Writeline($"Press {e.Key} {e.KeyModifiers}");
+        Console.WriteLine($"Press {e.Key} {e.KeyModifiers}");
 
         // If the key was released outside of the window, a KeyUp event wouldn't be raised.
         // So we need to check if the pressed keys
@@ -47,7 +47,7 @@ public class TASStackedInputHandler : TextAreaStackedInputHandler {
 
         if (app.SettingsService.SendInputs) {
             foreach (var k in pressedModKeys.Concat([e.Key]))
-                Console.Writeline($" - Send down {k}");
+                Console.WriteLine($" - Send down {k}");
             e.Handled = app.CelesteService.SendKeyEvent(pressedModKeys.Concat([e.Key]), released: false);
             if (e.Handled)
                 CancelNextTextInputEvent.Restart();
@@ -56,10 +56,10 @@ public class TASStackedInputHandler : TextAreaStackedInputHandler {
 
     public override void OnPreviewKeyUp(KeyEventArgs e) {
         var app = (Application.Current as App)!;
-        Console.Writeline($"Release {e.Key} {e.KeyModifiers}");
+        Console.WriteLine($"Release {e.Key} {e.KeyModifiers}");
         if (app.SettingsService.SendInputs) {
             foreach (var k in pressedModKeys.Concat([e.Key]))
-                Console.Writeline($" - Send up {k}");
+                Console.WriteLine($" - Send up {k}");
             e.Handled = app.CelesteService.SendKeyEvent(pressedModKeys.Concat([e.Key]), released: true);
             if (e.Handled)
                 CancelNextTextInputEvent.Restart();

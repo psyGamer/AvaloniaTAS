@@ -139,7 +139,7 @@ public partial class EditorControl : UserControl {
 
     private static void HandleActionInput(TextArea textArea, TextInputEventArgs e) {
         // Manually cancel the event, because the hotkey got forwarded to Celeste
-        Console.Writeline($" - Last cancel {TASStackedInputHandler.CancelNextTextInputEvent.Elapsed}");
+        Console.WriteLine($" - Last cancel {TASStackedInputHandler.CancelNextTextInputEvent.Elapsed}");
         if (TASStackedInputHandler.CancelNextTextInputEvent.IsRunning && TASStackedInputHandler.CancelNextTextInputEvent.Elapsed < TASStackedInputHandler.CancellationTime) {
             TASStackedInputHandler.CancelNextTextInputEvent.Stop();
             e.Handled = true;
